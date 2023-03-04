@@ -10,7 +10,7 @@ import psycopg2
 
 from alpha_vantage import timeseries
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig()
 logger = logging.getLogger(Path(__file__).stem)
 logger.setLevel(logging.DEBUG)
 
