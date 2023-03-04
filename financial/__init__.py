@@ -33,6 +33,48 @@ def close_database(exception):
         logger.debug("Closing database connection")
         db.close()
 
+def convert_dates(start_date, end_date, required, logger):
+    if start_date is None:
+        if required:
+            return make_statistics_response(
+                error="Argument `start_date` is required for `statistics` request.",
+                status_code=400
+            )
+    else:
+        try:
+            start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+        except ValueError:
+            logger.exception("`start_date` has invalid format.")
+            return make_statistics_response(
+                error="Argument `start_date` has invalid format. Passed argument `{}`.".format(start_date),
+                status_code=400
+            )
+        
+    if end_date is None:
+        if required:
+            return make_statistics_response(
+                error="Argument `end_date` is required for `statistics` request.",
+                status_code=400
+            )
+    else:
+        try:
+            end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
+        except ValueError:
+            logger.exception("`end_date` has invalid format.")
+            return make_statistics_response(
+                error="Argument `end_date` has invalid format. Passed argument `{}`.".format(end_date),
+                status_code=400
+            )
+        
+    if start_date is not None and end_date is not None and start_date > end_date:
+        logger.error("`start_date` is a later date than `end_date`.")
+        return make_statistics_response(
+            error="Argument `start_date` must be a earlier date than `end_date`. Passed arguments `{}` <=> `{}`.".format(start_date, end_date),
+            status_code=400
+        )
+    else:
+        return (start_date, end_date)
+
 def make_financial_data_response(
         data: List[Any] = None,
         count: int = 0,
@@ -80,8 +122,12 @@ def financial_data():
 
     # Get request arguments
     symbol = args.get("symbol")
-    start_date = args.get("start_date")
-    end_date = args.get("end_date")
+    
+    date_conversion = convert_dates(args.get("start_date"), args.get("end_date"), False, logger)
+    if type(date_conversion) is Response:
+        return date_conversion
+    else:
+        start_date, end_date = date_conversion
 
     # Cast limit to integer or get default value
     limit = args.get("limit")
@@ -127,7 +173,7 @@ def financial_data():
     if start_date is not None:
         wheres.append("date >= '{}'".format(start_date))
     if end_date is not None:
-        wheres.append("date < '{}'".format(end_date))
+        wheres.append("date <= '{}'".format(end_date))
 
     if len(wheres) == 0:
         wheres = ""
@@ -198,37 +244,11 @@ def statistics():
             status_code=400
         )
     
-    start_date = args.get("start_date")
-    if start_date is None:
-        return make_statistics_response(
-            error="Argument `start_date` is required for `statistics` request.",
-            status_code=400
-        )
+    date_conversion = convert_dates(args.get("start_date"), args.get("end_date"), True, logger)
+    if type(date_conversion) is Response:
+        return date_conversion
     else:
-        try:
-            start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-        except ValueError as e:
-            logger.exception("`start_date` has invalid format.")
-            return make_statistics_response(
-                error="Argument `start_date` has invalid format. Passed argument `{}`.".format(start_date),
-                status_code=400
-            )
-        
-    end_date = args.get("end_date")
-    if end_date is None:
-        return make_statistics_response(
-            error="Argument `end_date` is required for `statistics` request.",
-            status_code=400
-        )
-    else:
-        try:
-            end_date = datetime.datetime.strptime(end_date, "%Y-%m-%d").date()
-        except ValueError as e:
-            logger.exception("`end_date` has invalid format.")
-            return make_statistics_response(
-                error="Argument `end_date` has invalid format. Passed argument `{}`.".format(end_date),
-                status_code=400
-            )
+        start_date, end_date = date_conversion
     
     query = """SELECT AVG(fd.open_price), AVG(fd.close_price), AVG(fd.volume)
                 FROM financial_data as fd
@@ -250,9 +270,6 @@ def statistics():
 
 def create_app(config=None):
     app = Flask(__name__)
-
-    # Getting enviroment variables
-    api_key = get_envvar("ALPHA_VANTAGE_API_KEY")
 
     bp = Blueprint("api", __name__)
     bp.add_url_rule("/financial_data", view_func=financial_data)
