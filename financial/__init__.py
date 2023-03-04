@@ -185,9 +185,16 @@ def financial_data():
         where="WHERE {}".format(wheres) if wheres else "",
     )
     with db.cursor() as cur:
-        # Execute query
-        cur.execute(query)
-        rows = cur.fetchall()
+        try:
+            # Execute query
+            cur.execute(query)
+            rows = cur.fetchall()
+        except psycopg2.errors.UndefinedTable:
+            logger.exception("Database is uninitialized.")
+            return make_financial_data_response(
+                error="The application is still being initialized.",
+                status_code=500
+            )
     # Get count
     count = len(rows)
     # Filter response
@@ -254,9 +261,16 @@ def statistics():
                 FROM financial_data as fd
                 WHERE fd.symbol = %s AND (fd.date BETWEEN %s AND %s);"""
     with db.cursor() as cur:
-        # Execute query
-        cur.execute(query, (symbol, start_date, end_date))
-        rows = cur.fetchone()
+        try:
+            # Execute query
+            cur.execute(query, (symbol, start_date, end_date))
+            rows = cur.fetchone()
+        except psycopg2.errors.UndefinedTable:
+            logger.exception("Database is uninitialized.")
+            return make_financial_data_response(
+                error="The application is still being initialized.",
+                status_code=500
+            )
 
     return make_statistics_response(
         symbol,
