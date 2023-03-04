@@ -1,0 +1,18 @@
+version: '0.0.1'
+services:
+  api:
+    build: .
+    environment:
+      - ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - 8080:8080
+  postgres:
+    image: postgres:alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data:rw
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+volumes:
+  postgres_data:
