@@ -228,7 +228,7 @@ def make_statistics_response(
         data["average_daily_close_price"] = avg_close
         data["average_daily_volume"] = avg_volume
         
-    info = {error: error}
+    info = {"error": error}
 
     # Build response
     resp = jsonify(
