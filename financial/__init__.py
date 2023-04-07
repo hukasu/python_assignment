@@ -89,8 +89,8 @@ def make_financial_data_response(
             {
                 "symbol": d[0].strip(),
                 "date": d[1].strftime("%Y-%m-%d"),
-                "open": d[2],
-                "close": d[3],
+                "open_price": d[2],
+                "close_price": d[3],
                 "volume": d[4],
             } for d in data
         ]
