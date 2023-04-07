@@ -218,9 +218,16 @@ def make_statistics_response(
         error: str = "",
         status_code: int = 200
 ) -> Response:
+    logger = current_app.logger
     # Build response data
-    data = {}
+    if avg_open is None:
+        assert(avg_close is None)
+        assert(avg_volume is None)
+        logger.debug("Empty response")
+        data = None
+        error = "The query had no results. Try another date range and verify symbol is correct."
     if not error:
+        data = {}
         data["symbol"] = symbol
         data["start_date"] = start_date.isoformat()
         data["end_date"] = end_date.isoformat()
@@ -257,7 +264,7 @@ def statistics():
     else:
         start_date, end_date = date_conversion
     
-    query = """SELECT AVG(fd.open_price), AVG(fd.close_price), AVG(fd.volume)
+    query = """SELECT AVG(fd.open_price), AVG(fd.close_price), AVG(CAST(fd.volume as FLOAT8))
                 FROM financial_data as fd
                 WHERE fd.symbol = %s AND (fd.date BETWEEN %s AND %s);"""
     with db.cursor() as cur:
